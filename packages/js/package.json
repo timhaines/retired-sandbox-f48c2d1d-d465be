@@ -1,0 +1,14 @@
+{
+  "name": "@timhaines/sandbox-kit-123",
+  "version": "0.1.0",
+  "description": "Build-integrity fixture. Not a real library.",
+  "main": "index.js",
+  "files": [
+    "index.js"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timhaines/sandbox-f48c2d1d-d465be.git"
+  }
+}

@@ -1,0 +1,75 @@
+name: Publish Python
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: publish-py
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  check:
+    if: github.repository == 'timhaines/sandbox-f48c2d1d-d465be'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      publish: ${{ steps.version.outputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Is this version on PyPI yet
+        id: version
+        working-directory: py
+        run: python3 scripts/check.py >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: check
+    if: needs.check.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: py
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: '0.9.22'
+          python-version: '3.11'
+      - run: uv build --no-sources
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dists
+          path: |
+            py/dist/*.whl
+            py/dist/*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: [build]
+    if: github.repository == 'timhaines/sandbox-f48c2d1d-d465be' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: Print this run's identity claims
+        run: |
+          curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=claims-only" \
+            | python3 -c 'import base64,json,sys; p=json.load(sys.stdin)["value"].split(".")[1]; c=json.loads(base64.urlsafe_b64decode(p+"="*(-len(p)%4))); print("::notice title=claims::" + ", ".join("%s=%s" % (k, c.get(k) or "none") for k in ("ref","job_workflow_ref","environment","event_name")))'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dists
+          path: dist
+      - name: Upload with attestations
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          attestations: true
+          print-hash: true

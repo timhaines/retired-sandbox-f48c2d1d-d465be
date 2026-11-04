@@ -1,0 +1,12 @@
+[project]
+name = "sandbox-kit-123"
+version = "0.1.0"
+description = "Build-integrity fixture. Not a real library."
+requires-python = ">=3.9"
+
+[build-system]
+requires = ["uv_build>=0.9.22,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "harness_kit"
